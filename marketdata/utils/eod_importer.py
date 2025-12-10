@@ -1,6 +1,7 @@
 import os
 import csv
 import requests
+import time
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import transaction
@@ -54,6 +55,10 @@ def fetch_eod_data(symbol, token, max_retries=3):
 
                 if text == "":
                     raise Exception("Empty response")
+                
+                # Symbol not found
+                if "symbol does not exist" in text.lower():
+                    raise Exception("Symbol does not exist")
 
                 reader = csv.reader(text.splitlines())
                 return list(reader)
@@ -81,7 +86,7 @@ def import_eod_for_all_symbols(token):
     failed_log_path = os.path.join(base_dir, "marketdata", "utils", "data", "failed_symbols.txt")
     success_log_path = os.path.join(base_dir, "marketdata", "utils", "data", "success_symbols.txt")
 
-    symbols = Symbol.objects.filter(market_type="NSE")  # NSE ONLY
+    symbols = Symbol.objects.filter(market_type="BSE")  # NSE ONLY
     total = symbols.count()
     processed = 0
 

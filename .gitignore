@@ -177,3 +177,7 @@ gmail_token.json
 celerybeat-schedule
 
 marketdata/utils/data/
+check_db_counts.py
+db_counts.txt
+missing_eod_symbols.txt
+temp_failed_debug.txt

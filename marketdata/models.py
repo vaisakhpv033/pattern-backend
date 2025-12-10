@@ -33,9 +33,9 @@ class Symbol(models.Model):
 class EodPrice(models.Model):
     trade_date = models.DateField()
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)
-    open = models.DecimalField(max_digits=12, decimal_places=2)
-    high = models.DecimalField(max_digits=12, decimal_places=2)
-    low = models.DecimalField(max_digits=12, decimal_places=2)
+    open = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    high = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    low = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     close = models.DecimalField(max_digits=12, decimal_places=2)
     volume = models.BigIntegerField()
     market_cap = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
