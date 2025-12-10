@@ -1,4 +1,3 @@
-# marketdata/management/commands/generate_emas.py
 import sys
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
