@@ -126,6 +126,7 @@ class PatternScanView(APIView):
             series = series_param.strip().lower() if series_param else None
 
             if not scrip or not pattern:
+                print("Scrip and Pattern are required.", scrip, pattern)
                 return Response(
                     {"error": "Scrip and Pattern are required."},
                     status=status.HTTP_400_BAD_REQUEST,
