@@ -3,7 +3,7 @@ from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.utils.timezone import now
 from marketdata.models import Symbol, EodPrice, Parameter, Index, IndexPrice
 from core.pattern_recognition import (
@@ -352,3 +352,89 @@ class PriceHistoryView(APIView):
         cache.set(cache_key, response, timeout=self.CACHE_TIMEOUT)
 
         return Response(response, status=status.HTTP_200_OK)
+
+
+
+class Week52HighView(APIView):
+    """
+    Returns the 52-week high for a scrip.
+    Supports both Symbol (stocks) and Index (Sensex, Nifty500).
+    """
+
+    def get(self, request, *args, **kwargs):
+        # -----------------------------------------
+        # 1. Validate Input
+        # -----------------------------------------
+        scrip = request.query_params.get("scrip")
+        if not scrip:
+            return Response(
+                {"error": "Query parameter 'scrip' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # -----------------------------------------
+        # 2. Compute cutoff date (52 weeks)
+        # -----------------------------------------
+        cutoff_date = date.today() - timedelta(days=365)
+
+        # -----------------------------------------
+        # 3. Check if scrip is a STOCK
+        # -----------------------------------------
+        stock_exists = Symbol.objects.filter(symbol=scrip).exists()
+
+        if stock_exists:
+            data = (
+                EodPrice.objects.filter(
+                    symbol__symbol=scrip,
+                    trade_date__gte=cutoff_date
+                )
+                .aggregate(week52_high=Max("high"))
+            )
+        else:
+            # -----------------------------------------
+            # 4. Check if scrip is an INDEX
+            # -----------------------------------------
+            index_exists = Index.objects.filter(symbol=scrip).exists()
+
+            if not index_exists:
+                return Response(
+                    {
+                        "error": f"'{scrip}' is not a valid symbol or index.",
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            data = (
+                IndexPrice.objects.filter(
+                    index__symbol=scrip,
+                    trade_date__gte=cutoff_date
+                )
+                .aggregate(week52_high=Max("high"))
+            )
+
+        # -----------------------------------------
+        # 5. Extract result
+        # -----------------------------------------
+        week52_high = data.get("week52_high")
+
+        if week52_high is None:
+            return Response(
+                {
+                    "scrip": scrip,
+                    "52week_high": None,
+                    "message": "No price data found for the past 52 weeks.",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # -----------------------------------------
+        # 6. Return Response
+        # -----------------------------------------
+        return Response(
+            {
+                "scrip": scrip,
+                "52week_high": float(week52_high),
+                "cutoff_date": cutoff_date.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
