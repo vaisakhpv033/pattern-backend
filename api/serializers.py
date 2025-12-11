@@ -7,3 +7,5 @@ class SymbolListItemSerializer(serializers.Serializer):
     symbol = serializers.CharField()
     name = serializers.CharField()
     type = serializers.CharField()
+    sector = serializers.CharField(allow_null=True)
+    sector_id = serializers.IntegerField(allow_null=True)

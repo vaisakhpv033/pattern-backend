@@ -19,8 +19,7 @@ from .utils import relevance
 
 class SymbolListView(APIView):
     """
-    Unified symbol + index search with pagination.
-    Designed for 4000+ records.
+    Unified symbol + index search with pagination + sector info.
     """
 
     pagination_class = SymbolPagination
@@ -29,7 +28,7 @@ class SymbolListView(APIView):
         query = request.query_params.get("q", "").strip()
 
         # ================================
-        # 1. Load Symbols
+        # 1. Load Symbols (with sector)
         # ================================
         symbol_qs = (
             Symbol.objects
@@ -40,17 +39,25 @@ class SymbolListView(APIView):
         if query:
             symbol_qs = symbol_qs.filter(
                 Q(symbol__icontains=query) |
-                Q(company_name__icontains=query)
+                Q(company_name__icontains=query) |
+                Q(sector__name__icontains=query)
             )
 
-        symbol_qs = symbol_qs.values("id", "symbol", "company_name")
+        symbol_qs = symbol_qs.values(
+            "id",
+            "symbol",
+            "company_name",
+            "sector__name",
+            "sector_id",
+        )
 
-        # Convert symbols to a uniform dict format
         symbol_list = [
             {
                 "id": s["id"],
                 "symbol": s["symbol"],
                 "name": s["company_name"] or s["symbol"],
+                "sector": s["sector__name"],
+                "sector_id": s["sector_id"],
                 "type": "symbol",
             }
             for s in symbol_qs
@@ -78,19 +85,21 @@ class SymbolListView(APIView):
                 "id": idx["id"],
                 "symbol": idx["symbol"],
                 "name": idx["name"],
+                "sector": None,
+                "sector_id": None,
                 "type": "index",
             }
             for idx in index_qs
         ]
 
         # ================================
-        # 3. Merge & Sort
+        # 3. Merge & Sort (using relevance)
         # ================================
         combined = symbol_list + index_list
         combined = sorted(combined, key=lambda x: relevance(x, query))
 
         # ================================
-        # 4. Apply Pagination
+        # 4. Pagination
         # ================================
         paginator = self.pagination_class()
         paginated_data = paginator.paginate_queryset(combined, request)
